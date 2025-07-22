@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Auto-Updating Weather App</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #89f7fe, #66a6ff);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .weather-container {
+      background: white;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      max-width: 600px;
+      width: 90%;
+    }
+
+    .search-box {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .search-box input {
+      padding: 10px;
+      font-size: 16px;
+      width: 80%;
+      border: none;
+      border-radius: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      outline: none;
+    }
+
+    .current-weather, .forecast {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .current-weather h2 {
+      margin-bottom: 10px;
+    }
+
+    .forecast-days {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+
+    .day {
+      background: #f5f5f5;
+      border-radius: 12px;
+      padding: 10px;
+      margin: 5px;
+      width: 28%;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .day img {
+      width: 50px;
+      height: 50px;
+    }
+
+    .error {
+      color: red;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 500px) {
+      .day {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="weather-container">
+    <div class="search-box">
+      <input type="text" id="cityInput" placeholder="Enter city name and press Enter" />
+    </div>
+    <div class="current-weather" id="currentWeather"></div>
+    <div class="forecast" id="forecastWeather"></div>
+    <div class="error" id="error"></div>
+  </div>
+
+  <script>
+    const apiKey = "72d347147c6f4af9a9a95700250807";
+
+    const cityInput = document.getElementById("cityInput");
+    const currentWeather = document.getElementById("currentWeather");
+    const forecastWeather = document.getElementById("forecastWeather");
+    const errorBox = document.getElementById("error");
+
+    let currentCity = null;
+    const updateInterval = 60 * 60 * 1000; // 1 hour in milliseconds
+
+    cityInput.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        const city = cityInput.value.trim();
+        if (city) {
+          currentCity = city;
+          getWeather(city);
+        }
+      }
+    });
+
+    function getWeather(city) {
+      const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${city}&days=7&aqi=no&alerts=no`;
+
+      fetch(url)
+        .then((res) => {
+          if (!res.ok) throw new Error("City not found");
+          return res.json();
+        })
+        .then((data) => {
+          errorBox.textContent = "";
+          displayCurrentWeather(data);
+          displayForecast(data.forecast.forecastday);
+        })
+        .catch((err) => {
+          currentWeather.innerHTML = "";
+          forecastWeather.innerHTML = "";
+          errorBox.textContent = err.message;
+        });
+    }
+
+    function displayCurrentWeather(data) {
+      const { location, current } = data;
+      currentWeather.innerHTML = `
+        <h2>${location.name}, ${location.country}</h2>
+        <p>${new Date().toDateString()}</p>
+        <h1>${current.temp_c}°C</h1>
+        <p><img src="https:${current.condition.icon}" alt=""> ${current.condition.text}</p>
+      `;
+    }
+
+    function displayForecast(days) {
+      forecastWeather.innerHTML = `<h3>7-Day Forecast</h3><div class="forecast-days">` +
+        days.map(day => `
+          <div class="day">
+            <strong>${new Date(day.date).toDateString().split(' ')[0]}</strong>
+            <br/>
+            <img src="https:${day.day.condition.icon}" alt="${day.day.condition.text}">
+            <div>${day.day.avgtemp_c}°C</div>
+            <small>${day.day.condition.text}</small>
+          </div>
+        `).join('') + `</div>`;
+    }
+
+    // Auto update weather every hour
+    setInterval(() => {
+      if (currentCity) {
+        getWeather(currentCity);
+      }
+    }, updateInterval);
+  </script>
+</body>
+</html>
